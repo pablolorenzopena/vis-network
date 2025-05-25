@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test CustomImageShape</title>
+   <script
+      type="text/javascript"
+      src="../../../standalone/umd/vis-network.min.js"
+    ></script>
+  <style>
+    #mynetwork {
+      width: 800px;
+      height: 600px;
+      border: 1px solid lightgray;
+    }
+  </style>
+</head>
+<body>
+  <h2>Test nodo con shape: 'customImage'</h2>
+  <div id="mynetwork"></div>
+ 
+  <script>
+    const nodes = [
+      {
+        id: 1,
+        label: "Custom image",
+        shape: "customImage",
+        image: "https://cdn-icons-png.flaticon.com/512/25/25231.png",
+        size: 100
+      }
+    ];
+
+    const edges = [];
+
+    const container = document.getElementById('mynetwork');
+    const data = { nodes, edges };
+    const options = {
+      nodes: {
+        shape: "dot",
+        size: 30,
+        font: {
+          size: 14,
+        }
+      },
+      physics: false
+    };
+
+    const network = new vis.Network(container, data, options);
+  </script>
+</body>
+</html>

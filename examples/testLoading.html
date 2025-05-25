@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test EnhancedImageShape con UI</title>
+  <script type="text/javascript" src="../../../standalone/umd/vis-network.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    header {
+      background-color: #222;
+      color: white;
+      padding: 1rem;
+      font-size: 1.2rem;
+    }
+
+    .main-container {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+
+    #mynetwork {
+      flex: 1;
+      border-right: 1px solid #ccc;
+      position: relative;
+    }
+
+    .sidebar {
+      width: 300px;
+      padding: 1rem;
+      background: #f5f5f5;
+      box-sizing: border-box;
+    }
+    .sidebar label {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 14px;
+}
+
+.sidebar input[type="text"],
+.sidebar input[type="color"],
+.sidebar textarea {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+}
+
+    .controls button {
+      display: block;
+      width: 100%;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      font-size: 14px;
+    }
+
+    #tooltip {
+      position: absolute;
+      display: none;
+      background: black;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    🔍 Test EnhancedImageShape – Nodos OSINT interactivos
+  </header>
+
+  <div class="main-container">
+    <div id="mynetwork"></div>
+    <div class="sidebar">
+  <h3>Gestión de Nodos</h3>
+
+  <button onclick="addNewNode()">➕ Añadir Nodo</button>
+  <hr />
+
+  <div id="nodeEditor" style="display:none">
+    <h4>Editar Nodo <span id="nodeIdLabel"></span></h4>
+    <label>Título</label>
+    <input id="editTitle" />
+    
+    <label>Color</label>
+    <input id="editColor" type="color" />
+
+    <label>Cargando</label>
+    <input type="checkbox" id="editLoading" />
+
+    <label>Iconos (JSON)</label>
+    <textarea id="editIcons" rows="5" placeholder='[{"src":"url", "tooltip":"info"}]'></textarea>
+
+    <button onclick="applyNodeChanges()">✅ Aplicar Cambios</button>
+    <button onclick="toggleSelectedNodeLoading()">Alternar Cargando</button>
+  </div>
+</div>
+
+  </div>
+
+  <div id="tooltip"></div>
+
+  <script>
+    let loading = false;
+    let extraIcons = false;
+
+    const nodes = new vis.DataSet([
+      {
+        id: 1,
+        title: "Nodo OSINT",
+        label: "Entidad OSINT",
+        shape: "enhancedImage",
+        image: "https://cdn-icons-png.flaticon.com/512/25/25231.png",
+        size: 100,
+        icons: [
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/9068/9068756.png",
+            tooltip: "Tareas pendientes",
+            badge: { color: "orange", value: 2 },
+            onClick: () => console.log("⭐ Click en icono destacado")
+          }
+        ]
+      }
+    ]);
+
+    const edges = new vis.DataSet([]);
+
+    const container = document.getElementById("mynetwork");
+    const data = { nodes, edges };
+    const options = {
+      physics: false,
+      interaction: { hover: true }
+    };
+
+    const network = new vis.Network(container, data, options);
+
+    function toggleLoading() {
+      const node = network.body.nodes[1];
+      if (node?.shape?.setLoading) {
+        loading = !loading;
+        node.shape.setLoading(loading);
+        network.redraw();
+      }
+    }
+
+    function toggleIcons() {
+      const node = network.body.nodes[1];
+      if (node?.shape?.setIcons) {
+        extraIcons = !extraIcons;
+        const icons = [
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/9068/9068756.png",
+            tooltip: "Tareas pendientes",
+            badge: { color: "orange", value: 2 },
+             onClick: () => console.log("⭐ Click en icono destacado")
+          }
+        ];
+
+        if (extraIcons) {
+          icons.push({
+            src: "https://cdn-icons-png.flaticon.com/512/1828/1828817.png",
+            tooltip: "Destacado",
+            badge: { color: "blue" },
+             onClick: () => console.log("⭐ Click en icono destacado")
+          });
+        }
+
+        node.shape.setIcons(icons);
+        network.redraw();
+      }
+    }
+
+    const tooltip = document.getElementById('tooltip');
+
+    network.on('afterDrawing', () => {
+      tooltip.style.display = 'none';
+    });
+
+    network.on('iconHovered', ({ icon, x, y }) => {
+      console.log(`Icon hovered: ${icon.tooltip} at (${x}, ${y})`);
+      if (!icon || !icon.tooltip) return;
+      const rect = container.getBoundingClientRect();
+      tooltip.textContent = icon.tooltip;
+      tooltip.style.left = `${x + rect.left + 10}px`;
+      tooltip.style.top = `${y + rect.top + 10}px`;
+      tooltip.style.display = 'block';
+    });
+
+    network.on('blurNode', () => tooltip.style.display = 'none');
+
+
+    let nodeCounter = 2;
+
+function addNewNode() {
+  const newId = nodeCounter++;
+  nodes.add({
+    id: newId,
+    label: `Nodo ${newId}`,
+    shape: "enhancedImage",
+    image: "https://cdn-icons-png.flaticon.com/512/25/25231.png",
+    size: 100,
+    title: `Nodo ${newId}`,
+    icons: [],
+  });
+  network.selectNodes([newId]);
+  showNodeEditor(newId);
+}
+
+network.on("selectNode", function (params) {
+  const nodeId = params.nodes[0];
+  showNodeEditor(nodeId);
+});
+
+function showNodeEditor(nodeId) {
+  const node = network.body.nodes[nodeId];
+  if (!node) return;
+
+  document.getElementById("nodeEditor").style.display = "block";
+  document.getElementById("nodeIdLabel").textContent = `#${nodeId}`;
+  document.getElementById("editTitle").value = node.options.label || "";
+  document.getElementById("editColor").value = node.options.color?.background || "#ffffff";
+  document.getElementById("editLoading").checked = node?.shape?.loading || false;
+  document.getElementById("editIcons").value = JSON.stringify((node?.shape?.icons || []), null, 2);
+}
+
+function applyNodeChanges() {
+  const nodeIdText = document.getElementById("nodeIdLabel").textContent;
+  const nodeId = parseInt(nodeIdText.replace("#", ""));
+  const node = network.body.nodes[nodeId];
+  if (!node) return;
+
+  const label = document.getElementById("editTitle").value;
+  const color = document.getElementById("editColor").value;
+  const loading = document.getElementById("editLoading").checked;
+  let icons = [];
+
+  try {
+    icons = JSON.parse(document.getElementById("editIcons").value);
+    icons.forEach(icon => {
+      if (!icon.onClick) {
+        icon.onClick = () => console.log(`👉 Click en icono "${icon.tooltip}"`);
+      }
+    });
+  } catch (e) {
+    alert("Error en el JSON de iconos");
+    return;
+  }
+
+  // Aplicar cambios
+  nodes.update({ id: nodeId, label, color: { background: color } });
+  if (node?.shape?.setIcons) node.shape.setIcons(icons);
+  if (node?.shape?.setLoading) node.shape.setLoading(loading);
+  network.redraw();
+}
+function toggleSelectedNodeLoading() {
+  const selectedIds = network.getSelectedNodes();
+  if (selectedIds.length === 0) {
+    alert("Selecciona un nodo primero.");
+    return;
+  }
+
+  const nodeId = selectedIds[0];
+  const node = network.body.nodes[nodeId];
+  if (node?.shape?.setLoading) {
+    const newState = !node.shape.loading;
+    node.shape.setLoading(newState);
+    console.log(`🌀 Nodo ${nodeId} loading:`, newState);
+    network.redraw();
+  } else {
+    console.warn(`Nodo ${nodeId} no tiene método setLoading.`);
+  }
+}
+  </script>
+</body>
+</html>
