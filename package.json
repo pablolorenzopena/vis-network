@@ -43,7 +43,7 @@
     "url": "https://opencollective.com/visjs"
   },
   "scripts": {
-    "preinstall": "npx npm-force-resolutions",
+    
     "serve": "serve -l tcp://127.0.0.1:58253",
     "test": "npm run test:unit && npm run test:e2e:functional && npm run test:e2e:visual",
     "test:e2e:functional": "cross-env CYPRESS_FUNCTIONAL=true npm run test:e2e:headless",
